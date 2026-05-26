@@ -1,0 +1,46 @@
+services:
+
+  db:
+    image: postgres:16
+    container_name: infradash-db
+
+    environment:
+      POSTGRES_USER: infradash
+      POSTGRES_PASSWORD: infradash
+      POSTGRES_DB: infradash
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: infradash-backend
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    container_name: infradash-frontend
+
+    ports:
+      - "5173:5173"
+
+    volumes:
+      - ./frontend:/app
+
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
