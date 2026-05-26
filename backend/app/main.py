@@ -4,4 +4,5 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"status": "ok"}
+    return {"status": "infradash backend ok"}
+
