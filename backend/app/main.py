@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from pathlib import Path
 
 import pandas as pd
@@ -13,6 +15,19 @@ from .models import System
 from typing import Optional
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+
+    allow_origins=[
+        "http://localhost:5173"
+    ],
+
+    allow_credentials=True,
+
+    allow_methods=["*"],
+
+    allow_headers=["*"],
+)
 
 # crea tablas automáticamente
 Base.metadata.create_all(bind=engine)
