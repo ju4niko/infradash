@@ -21,6 +21,9 @@ services:
 
     container_name: infradash-backend
 
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
     ports:
       - "8000:8000"
 
@@ -42,7 +45,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      
+
     depends_on:
       - backend
 
