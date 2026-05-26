@@ -1,0 +1,39 @@
+# Node
+node_modules/
+dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Data
+data/uploads/*
+data/processed/*
+data/rejected/*
+
+# Except placeholders
+!data/uploads/.gitkeep
+!data/processed/.gitkeep
+!data/rejected/.gitkeep
+
+# Environment
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Vite
+.vite/
+
+# IDE
+.vscode/
+.idea/
+
+# Postgres
+postgres_data/
+
