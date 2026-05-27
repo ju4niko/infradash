@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -e
+
+echo "[1/2] Checking Docker status..."
+docker info >/dev/null 2>&1 || {
+  echo "Docker is not running"
+  exit 1
+}
+
+echo "[2/2] Pruning unused volumes..."
+docker volume prune -f
+
+echo "Cleanup complete."
