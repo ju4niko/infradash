@@ -7,7 +7,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  RadialBarChart,
+  RadialBar,
+  PolarAngleAxis,
+  Legend
 } from "recharts"
 
 function App() {
@@ -17,6 +21,8 @@ function App() {
   const [selectedSnapshot, setSelectedSnapshot] = useState("")
   const [selectedSystem, setSelectedSystem] = useState("")
   const [history, setHistory] = useState([])
+  const [globalHistory, setGlobalHistory] = useState([])
+  const [gauges, setGauges] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -37,6 +43,23 @@ function App() {
         }
       })
       .catch(console.error)
+
+
+
+
+  fetch("http://localhost:8000/api/gauges")
+    .then((res) => res.json())
+    .then((data) => {
+
+      setGauges(data)
+
+    })
+    .catch(console.error)
+
+
+
+
+
 
   }, [])
 
@@ -60,6 +83,8 @@ function App() {
       .catch(console.error)
 
   }, [selectedSystem])
+
+
 
   function loadSystems(snapshotDate) {
 
@@ -97,6 +122,106 @@ function App() {
     <div style={{ padding: "20px" }}>
 
       <h1>InfraDash</h1>
+
+<h2>Estado actual de sistemas</h2>
+
+<div
+  style={{
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: "16px",
+    marginBottom: "30px"
+  }}
+>
+
+  {
+    gauges.map((gauge) => (
+
+      <div
+        key={gauge.sistema}
+        style={{
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          padding: "10px",
+          textAlign: "center"
+        }}
+      >
+
+        <div
+          style={{
+            fontWeight: "bold",
+            marginBottom: "10px",
+            fontSize: "14px"
+          }}
+        >
+          {gauge.sistema}
+        </div>
+
+        <ResponsiveContainer
+          width="100%"
+          height={150}
+        >
+
+<RadialBarChart
+  innerRadius="65%"
+  outerRadius="100%"
+  data={[
+    {
+      value: gauge.porcentaje
+    }
+  ]}
+  startAngle={180}
+  endAngle={0}
+>
+
+  <PolarAngleAxis
+    type="number"
+    domain={[0, 100]}
+    tick={false}
+  />
+
+  <RadialBar
+    dataKey="value"
+    background
+    cornerRadius={10}
+    fill={
+      gauge.porcentaje >= 80
+        ? "#00C853"
+        : gauge.porcentaje >= 50
+        ? "#FFD600"
+        : "#D50000"
+    }
+  />
+
+</RadialBarChart>
+
+
+
+        </ResponsiveContainer>
+
+        <div>
+
+          <b>
+            {gauge.actual}
+          </b>
+
+      <div>
+  Máx: {gauge.maximo}
+</div>
+          <br />
+
+          {gauge.porcentaje}%
+
+        </div>
+
+      </div>
+
+    ))
+  }
+
+</div>
+
 
       <div style={{ marginBottom: "20px" }}>
 

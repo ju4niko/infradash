@@ -298,6 +298,39 @@ def get_systems(
 
     return systems
 
+@app.get("/api/history")
+def get_all_history():
+
+    db = SessionLocal()
+
+    rows = (
+        db.query(
+            Snapshot.snapshot_date,
+            System.sistemas,
+            System.qty_nes_numeric
+        )
+        .join(
+            Snapshot,
+            System.snapshot_id == Snapshot.id
+        )
+        .order_by(
+            Snapshot.snapshot_date
+        )
+        .all()
+    )
+
+    db.close()
+
+    return [
+        {
+            "snapshot_date": row.snapshot_date,
+            "sistema": row.sistemas,
+            "qty_nes": row.qty_nes_numeric
+        }
+        for row in rows
+    ]
+
+
 @app.get("/api/history/{system_name}")
 def get_system_history(system_name: str):
 
@@ -330,6 +363,115 @@ def get_system_history(system_name: str):
         }
         for row in rows
     ]
+
+@app.get("/api/gauges")
+def get_gauges():
+
+    db = SessionLocal()
+
+    snapshots = (
+        db.query(Snapshot)
+        .order_by(
+            Snapshot.snapshot_date.desc()
+        )
+        .all()
+    )
+
+    if not snapshots:
+
+        db.close()
+
+        return []
+
+    latest_snapshot = snapshots[0]
+
+    current_systems = (
+        db.query(System)
+        .filter(
+            System.snapshot_id == latest_snapshot.id
+        )
+        .all()
+    )
+
+    result = []
+
+    for system in current_systems:
+
+        max_qty = (
+            db.query(
+                System.qty_nes_numeric
+            )
+            .filter(
+                System.sistemas == system.sistemas
+            )
+            .order_by(
+                System.qty_nes_numeric.desc()
+            )
+            .first()
+        )
+
+
+
+        min_qty = (
+            db.query(
+                System.qty_nes_numeric
+            )
+            .filter(
+                System.sistemas == system.sistemas
+            )
+            .order_by(
+                System.qty_nes_numeric.asc()
+            )
+            .first()
+        )
+
+        historical_max = (
+            max_qty[0]
+            if max_qty and max_qty[0] is not None
+            else 0
+        )
+
+        historical_min = (
+            min_qty[0]
+            if min_qty and min_qty[0] is not None
+            else 0
+        )
+
+        if historical_max == historical_min:
+            continue
+
+        percentage = 0
+
+        if historical_max > 0:
+
+            percentage = round(
+                (
+                    system.qty_nes_numeric
+                    / historical_max
+                ) * 100,
+                1
+            )
+
+        result.append({
+
+            "sistema": system.sistemas,
+
+            "actual": system.qty_nes_numeric,
+
+            "maximo": historical_max,
+
+            "porcentaje": percentage,
+
+            "snapshot_date": latest_snapshot.snapshot_date
+
+        })
+
+    db.close()
+
+    return sorted(
+        result,
+        key=lambda x: x["sistema"]
+    )
 
 @app.get("/api/snapshots")
 def get_snapshots():
