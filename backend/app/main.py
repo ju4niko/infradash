@@ -6,12 +6,13 @@ from pathlib import Path
 import pandas as pd
 import re
 import unicodedata
-
+from datetime import datetime
 from .database import SessionLocal
 from .database import engine
 from .database import Base
 
-from .models import System
+from .models import System, Snapshot
+from sqlalchemy import asc
 from typing import Optional
 
 app = FastAPI()
@@ -62,7 +63,7 @@ def root():
 
 
 @app.get("/api/import")
-def import_excel():
+def import_excel(snapshot_date: str):
 
     uploads = Path("/app/data/uploads")
 
@@ -71,6 +72,24 @@ def import_excel():
     result = []
 
     db = SessionLocal()
+
+
+    snapshot = db.query(Snapshot).filter(
+        Snapshot.snapshot_date == snapshot_date
+    ).first()
+
+    if not snapshot:
+        snapshot = Snapshot(
+            snapshot_date=datetime.strptime(
+                snapshot_date,
+                "%Y-%m-%d"
+            ).date()
+        )
+        db.add(snapshot)
+        db.commit()
+        db.refresh(snapshot)
+
+
 
     for file in files:
 
@@ -86,6 +105,13 @@ def import_excel():
                 normalize_column(col)
                 for col in df.columns
             ]
+            df = df.drop(
+                columns=["unnamed_14"],
+                errors="ignore"
+            )
+
+            print("COLUMNAS ENCONTRADAS:")
+            print(df.columns.tolist())
 
             # limpia strings
             # convierte timestamps a string
@@ -140,27 +166,13 @@ def import_excel():
                 if not system_name:
                     continue
 
-                existing = db.query(System).filter(
-                    System.sistemas == system_name
-                ).first()
+                row["snapshot_id"] = snapshot.id
 
-                if existing:
+                imported += 1
 
-                    updated += 1
+                new_system = System(**row)
 
-                    for key, value in row.items():
-
-                        if hasattr(existing, key):
-
-                            setattr(existing, key, value)
-
-                else:
-
-                    imported += 1
-
-                    new_system = System(**row)
-
-                    db.add(new_system)
+                db.add(new_system)
 
             db.commit()
 
@@ -229,7 +241,7 @@ def import_excel():
 
 @app.get("/api/systems")
 def get_systems(
-
+    snapshot_date: Optional[str] = None,
     vendor: Optional[str] = None,
     tecnologia: Optional[str] = None,
     infra: Optional[str] = None
@@ -239,6 +251,25 @@ def get_systems(
     db = SessionLocal()
 
     query = db.query(System)
+
+
+    if snapshot_date:
+
+        snapshot = db.query(Snapshot).filter(
+            Snapshot.snapshot_date ==
+            datetime.strptime(
+                snapshot_date,
+                "%Y-%m-%d"
+            ).date()
+        ).first()
+
+        if snapshot:
+
+            query = query.filter(
+                System.snapshot_id == snapshot.id
+            )
+
+
 
     # filtro vendor
     if vendor:
@@ -266,3 +297,59 @@ def get_systems(
     db.close()
 
     return systems
+
+@app.get("/api/history/{system_name}")
+def get_system_history(system_name: str):
+
+    db = SessionLocal()
+
+    rows = (
+        db.query(
+            Snapshot.snapshot_date,
+            System.qty_nes_numeric
+        )
+        .join(
+            Snapshot,
+            System.snapshot_id == Snapshot.id
+        )
+        .filter(
+            System.sistemas == system_name
+        )
+        .order_by(
+            asc(Snapshot.snapshot_date)
+        )
+        .all()
+    )
+
+    db.close()
+
+    return [
+        {
+            "snapshot_date": row.snapshot_date,
+            "qty_nes": row.qty_nes_numeric
+        }
+        for row in rows
+    ]
+
+@app.get("/api/snapshots")
+def get_snapshots():
+
+    db = SessionLocal()
+
+    snapshots = (
+        db.query(Snapshot)
+        .order_by(
+            Snapshot.snapshot_date.desc()
+        )
+        .all()
+    )
+
+    db.close()
+
+    return [
+        {
+            "id": s.id,
+            "snapshot_date": s.snapshot_date
+        }
+        for s in snapshots
+    ]

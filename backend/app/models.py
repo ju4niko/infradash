@@ -1,13 +1,67 @@
-from sqlalchemy import Column, Integer, String, Float
+from datetime import datetime
+
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Float,
+    ForeignKey,
+    Date,
+    DateTime
+)
+
+from sqlalchemy.orm import relationship
+
 from app.database import Base
+
+
+class Snapshot(Base):
+
+    __tablename__ = "snapshots"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    snapshot_date = Column(
+        Date,
+        nullable=False,
+        unique=True
+    )
+
+    source_file = Column(String)
+
+    imported_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    systems = relationship(
+        "System",
+        back_populates="snapshot"
+    )
 
 
 class System(Base):
 
     __tablename__ = "systems"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
 
+    snapshot_id = Column(
+        Integer,
+        ForeignKey("snapshots.id")
+    )
+
+    imo = Column(String)
+    detalles_tecnologia = Column(String)
+    
     sistemas = Column(String)
     vendor = Column(String)
     soporte = Column(String)
@@ -25,3 +79,8 @@ class System(Base):
     redundancia = Column(String)
 
     comentarios = Column(String)
+
+    snapshot = relationship(
+        "Snapshot",
+        back_populates="systems"
+    )
