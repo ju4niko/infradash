@@ -15,7 +15,7 @@ import {
 } from "recharts"
 
 function App() {
-
+  const API_BASE = `http://${window.location.hostname}:8000`
   const [systems, setSystems] = useState([])
   const [snapshots, setSnapshots] = useState([])
   const [selectedSnapshot, setSelectedSnapshot] = useState("")
@@ -27,7 +27,7 @@ function App() {
 
   useEffect(() => {
 
-    fetch("http://localhost:8000/api/snapshots")
+    fetch(`${API_BASE}/api/snapshots`)
       .then((res) => res.json())
       .then((data) => {
 
@@ -47,7 +47,7 @@ function App() {
 
 
 
-  fetch("http://localhost:8000/api/gauges")
+  fetch(`${API_BASE}/api/gauges`)
     .then((res) => res.json())
     .then((data) => {
 
@@ -73,7 +73,7 @@ function App() {
     }
 
     fetch(
-      `http://localhost:8000/api/history/${encodeURIComponent(selectedSystem)}`
+      `${API_BASE}/api/history/${encodeURIComponent(selectedSystem)}`
     )
       .then((res) => res.json())
       .then((data) => {
@@ -91,7 +91,7 @@ function App() {
     setLoading(true)
 
     fetch(
-      `http://localhost:8000/api/systems?snapshot_date=${snapshotDate}`
+      `${API_BASE}/api/systems?snapshot_date=${snapshotDate}`
     )
       .then((res) => res.json())
       .then((data) => {
