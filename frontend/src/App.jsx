@@ -241,6 +241,7 @@ if (!trend)
   return null
 
 let extinctionText = ""
+let requiredTrendText = ""
 
 if (
   trend.direction === "down" &&
@@ -262,6 +263,39 @@ if (
 
   extinctionText =
     extinctionDate.toISOString().slice(0, 10)
+}
+
+const targetDate = targetDates[gauge.sistema]
+
+if (
+  targetDate &&
+  gauge.actual > 0
+) {
+
+  const target = new Date(targetDate)
+
+  const lastSnapshot = new Date(
+    trend.last_snapshot_date
+  )
+
+  const months =
+    (
+      target - lastSnapshot
+    ) /
+    (
+      1000 * 60 * 60 * 24 * 30.44
+    )
+
+  if (months > 0) {
+
+    const requiredTrend =
+      -(gauge.actual / months)
+
+    requiredTrendText =
+      requiredTrend.toFixed(1)
+
+  }
+
 }
 
 return (
@@ -310,6 +344,8 @@ return (
 
       Fecha objetivo:
 
+
+
       <br />
 
       <input
@@ -326,6 +362,24 @@ return (
       />
 
     </div>
+
+{
+  requiredTrendText && (
+
+    <div
+      style={{
+        marginTop: "6px",
+        color: "#1565C0",
+        fontWeight: "bold"
+      }}
+    >
+      🎯 Tasa requerida:
+      <br />
+      {requiredTrendText} NE/mes
+    </div>
+
+  )
+}
 
   </div>
 
