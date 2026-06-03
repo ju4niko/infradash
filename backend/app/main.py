@@ -592,7 +592,13 @@ def get_trends():
                 if trend < 0
                 else "stable",
 
-            "snapshots": n
+            "snapshots": n,
+            "last_snapshot_date": (
+                last_snapshot_date.isoformat()
+                if last_snapshot_date
+                else None
+            )
+
 
         })
 
