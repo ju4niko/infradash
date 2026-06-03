@@ -523,36 +523,65 @@ def get_trends():
         if len(history) < 2:
             continue
 
-        first = history[0]
-        last = history[-1]
+        n = len(history)
 
-        delta_qty = (
-            last["qty"]
-            - first["qty"]
+        x = []
+        y = []
+
+        base_date = history[0]["date"]
+
+        for point in history:
+
+            days = (
+                point["date"]
+                - base_date
+            ).days
+
+            x.append(days)
+
+            y.append(point["qty"])
+
+        sum_x = sum(x)
+        sum_y = sum(y)
+
+        sum_xy = sum(
+            xi * yi
+            for xi, yi in zip(x, y)
         )
 
-        delta_days = (
-            last["date"]
-            - first["date"]
-        ).days
+        sum_x2 = sum(
+            xi * xi
+            for xi in x
+        )
 
-        if delta_days <= 0:
+        denominator = (
+            n * sum_x2
+            - sum_x * sum_x
+        )
+
+        if denominator == 0:
             continue
 
-        delta_months = delta_days / 30.44
+        slope_per_day = (
+            (
+                n * sum_xy
+                - sum_x * sum_y
+            )
+            / denominator
+        )
 
         trend = round(
-            delta_qty / delta_months,
+            slope_per_day * 30.44,
             2
         )
+
+        current_value = history[-1]["qty"]
 
         result.append({
 
             "sistema": system_name,
 
-            "actual": last["qty"],
-
-            "inicial": first["qty"],
+            "actual": current_value,
 
             "trend": trend,
 
@@ -561,7 +590,9 @@ def get_trends():
                 if trend > 0
                 else "down"
                 if trend < 0
-                else "stable"
+                else "stable",
+
+            "snapshots": n
 
         })
 
