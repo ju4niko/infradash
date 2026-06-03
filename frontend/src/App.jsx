@@ -532,22 +532,47 @@ return (
 
             <ResponsiveContainer>
 
-              <LineChart data={history}>
 
-                <CartesianGrid strokeDasharray="3 3" />
 
-                <XAxis dataKey="snapshot_date" />
 
-                <YAxis />
 
-                <Tooltip />
+<LineChart>
 
-                <Line
-                  type="monotone"
-                  dataKey="qty_nes"
-                />
+  <CartesianGrid strokeDasharray="3 3" />
 
-              </LineChart>
+  <XAxis dataKey="snapshot_date" />
+
+  <YAxis />
+
+  <Tooltip />
+
+  <Line
+    data={history}
+    type="monotone"
+    dataKey="qty_nes"
+    strokeWidth={2}
+    dot={true}
+  />
+
+  {
+    projectionData.length > 0 && (
+
+      <Line
+        data={projectionData}
+        type="linear"
+        dataKey="qty_nes"
+        strokeDasharray="8 4"
+        strokeWidth={2}
+        dot={true}
+      />
+
+    )
+  }
+
+</LineChart>
+
+
+
 
             </ResponsiveContainer>
 
