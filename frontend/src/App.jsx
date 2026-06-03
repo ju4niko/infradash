@@ -25,6 +25,8 @@ function App() {
   const [gauges, setGauges] = useState([])
   const [loading, setLoading] = useState(true)
   const [trends, setTrends] = useState([])
+  const [targetDates, setTargetDates] = useState({})
+
 
   useEffect(() => {
 
@@ -249,7 +251,9 @@ if (
   const monthsToZero =
     gauge.actual / Math.abs(trend.trend)
 
-  const extinctionDate = new Date()
+  const extinctionDate = new Date(
+    trend.last_snapshot_date
+  )
 
   extinctionDate.setMonth(
     extinctionDate.getMonth() +
@@ -262,41 +266,70 @@ if (
 
 return (
 
-  <div
-    style={{
-      marginTop: "6px",
-      fontSize: "12px",
-      fontWeight: "bold"
-    }}
-  >
+  <div>
 
-    {
-      trend.direction === "up"
-        ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
-        : trend.direction === "down"
-        ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
-        : "➡️⚪ Estable"
-    }
+    <div
+      style={{
+        marginTop: "6px",
+        fontSize: "12px",
+        fontWeight: "bold"
+      }}
+    >
 
-    {
-      extinctionText && (
-        <div
-          style={{
-            marginTop: "4px",
-            color: "#D50000"
-          }}
-        >
-          💀 Extinción estimada:
-          <br />
-          {extinctionText}
-        </div>
-      )
-    }
+      {
+        trend.direction === "up"
+          ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
+          : trend.direction === "down"
+          ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
+          : "➡️⚪ Estable"
+      }
+
+      {
+        extinctionText && (
+          <div
+            style={{
+              marginTop: "4px",
+              color: "#D50000"
+            }}
+          >
+            💀 Extinción estimada:
+            <br />
+            {extinctionText}
+          </div>
+        )
+      }
+
+    </div>
+
+    <div
+      style={{
+        marginTop: "8px",
+        fontSize: "11px"
+      }}
+    >
+
+      Fecha objetivo:
+
+      <br />
+
+      <input
+        type="date"
+        value={
+          targetDates[gauge.sistema] || ""
+        }
+        onChange={(e) =>
+          setTargetDates({
+            ...targetDates,
+            [gauge.sistema]: e.target.value
+          })
+        }
+      />
+
+    </div>
 
   </div>
 
 )
-
 
 
 
