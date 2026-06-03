@@ -128,6 +128,12 @@ function App() {
     loadSystems(snapshotDate)
   }
 
+  const selectedTrend = trends.find(
+    t => t.sistema === selectedSystem
+  )
+
+
+
   return (
 
     <div style={{ padding: "20px" }}>
