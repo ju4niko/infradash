@@ -10,7 +10,7 @@ from datetime import datetime
 from .database import SessionLocal
 from .database import engine
 from .database import Base
-
+from collections import defaultdict
 from .models import System, Snapshot
 from sqlalchemy import asc
 from typing import Optional
@@ -18,15 +18,9 @@ from typing import Optional
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-
-    allow_origins=[
-        "*"
-    ],
-
+    allow_origins=["*"],
     allow_credentials=True,
-
     allow_methods=["*"],
-
     allow_headers=["*"],
 )
 
@@ -37,20 +31,13 @@ Base.metadata.create_all(bind=engine)
 def normalize_column(name: str) -> str:
 
     name = str(name)
-
     name = name.strip().lower()
-
     name = unicodedata.normalize("NFKD", name)
     name = name.encode("ascii", "ignore").decode("ascii")
-
     name = re.sub(r"\s+", "_", name)
-
     name = re.sub(r"[^a-z0-9_]", "", name)
-
     name = re.sub(r"_+", "_", name)
-
     name = name.strip("_")
-
     return name
 
 
@@ -495,3 +482,93 @@ def get_snapshots():
         }
         for s in snapshots
     ]
+
+@app.get("/api/trends")
+def get_trends():
+
+    db = SessionLocal()
+
+    rows = (
+        db.query(
+            Snapshot.snapshot_date,
+            System.sistemas,
+            System.qty_nes_numeric
+        )
+        .join(
+            Snapshot,
+            System.snapshot_id == Snapshot.id
+        )
+        .order_by(
+            Snapshot.snapshot_date.asc()
+        )
+        .all()
+    )
+
+    systems = defaultdict(list)
+
+    for row in rows:
+
+        systems[row.sistemas].append({
+
+            "date": row.snapshot_date,
+
+            "qty": row.qty_nes_numeric
+
+        })
+
+    result = []
+
+    for system_name, history in systems.items():
+
+        if len(history) < 2:
+            continue
+
+        first = history[0]
+        last = history[-1]
+
+        delta_qty = (
+            last["qty"]
+            - first["qty"]
+        )
+
+        delta_days = (
+            last["date"]
+            - first["date"]
+        ).days
+
+        if delta_days <= 0:
+            continue
+
+        delta_months = delta_days / 30.44
+
+        trend = round(
+            delta_qty / delta_months,
+            2
+        )
+
+        result.append({
+
+            "sistema": system_name,
+
+            "actual": last["qty"],
+
+            "inicial": first["qty"],
+
+            "trend": trend,
+
+            "direction":
+                "up"
+                if trend > 0
+                else "down"
+                if trend < 0
+                else "stable"
+
+        })
+
+    db.close()
+
+    return sorted(
+        result,
+        key=lambda x: x["sistema"]
+    )
+
