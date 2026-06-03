@@ -128,11 +128,15 @@ function App() {
     loadSystems(snapshotDate)
   }
 
+
+
+
   const selectedTrend = trends.find(
     t => t.sistema === selectedSystem
   )
 
-  let projectionData = []
+
+let chartData = [...history]
 
 if (
   selectedTrend &&
@@ -143,26 +147,53 @@ if (
   const lastPoint =
     history[history.length - 1]
 
-  projectionData = [
+  chartData = [
+
+    ...history.map(point => ({
+
+      snapshot_date:
+        point.snapshot_date,
+
+      qty_nes:
+        point.qty_nes,
+
+      qty_projection:
+        null
+
+    })),
 
     {
+
       snapshot_date:
         lastPoint.snapshot_date,
 
       qty_nes:
+        null,
+
+      qty_projection:
         lastPoint.qty_nes
+
     },
 
     {
+
       snapshot_date:
         selectedTrend.extinction_date,
 
-      qty_nes: 0
+      qty_nes:
+        null,
+
+      qty_projection:
+        0
+
     }
 
   ]
 
 }
+
+
+
 
   return (
 
