@@ -132,7 +132,37 @@ function App() {
     t => t.sistema === selectedSystem
   )
 
+  let projectionData = []
 
+if (
+  selectedTrend &&
+  selectedTrend.extinction_date &&
+  history.length > 0
+) {
+
+  const lastPoint =
+    history[history.length - 1]
+
+  projectionData = [
+
+    {
+      snapshot_date:
+        lastPoint.snapshot_date,
+
+      qty_nes:
+        lastPoint.qty_nes
+    },
+
+    {
+      snapshot_date:
+        selectedTrend.extinction_date,
+
+      qty_nes: 0
+    }
+
+  ]
+
+}
 
   return (
 
