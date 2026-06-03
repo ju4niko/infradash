@@ -24,6 +24,7 @@ function App() {
   const [globalHistory, setGlobalHistory] = useState([])
   const [gauges, setGauges] = useState([])
   const [loading, setLoading] = useState(true)
+  const [trends, setTrends] = useState([])
 
   useEffect(() => {
 
@@ -57,6 +58,14 @@ function App() {
     .catch(console.error)
 
 
+  fetch(`${API_BASE}/api/trends`)
+    .then((res) => res.json())
+    .then((data) => {
+
+      setTrends(data)
+
+    })
+    .catch(console.error)  
 
 
 
@@ -163,57 +172,97 @@ function App() {
           height={150}
         >
 
-<RadialBarChart
-  innerRadius="65%"
-  outerRadius="100%"
-  data={[
-    {
-      value: gauge.porcentaje
-    }
-  ]}
-  startAngle={180}
-  endAngle={0}
->
+          <RadialBarChart
+            innerRadius="65%"
+            outerRadius="100%"
+            data={[
+              {
+                value: gauge.porcentaje
+              }
+            ]}
+            startAngle={180}
+            endAngle={0}
+          >
 
-  <PolarAngleAxis
-    type="number"
-    domain={[0, 100]}
-    tick={false}
-  />
+          <PolarAngleAxis
+            type="number"
+            domain={[0, 100]}
+            tick={false}
+          />
 
-  <RadialBar
-    dataKey="value"
-    background
-    cornerRadius={10}
-    fill={
-      gauge.porcentaje >= 80
-        ? "#00C853"
-        : gauge.porcentaje >= 50
-        ? "#FFD600"
-        : "#D50000"
-    }
-  />
+          <RadialBar
+            dataKey="value"
+            background
+            cornerRadius={10}
+            fill={
+              gauge.porcentaje >= 80
+              ? "#00C853"
+              : gauge.porcentaje >= 50
+              ? "#FFD600"
+              : "#D50000"
+            }
+          />
 
-</RadialBarChart>
-
-
+          </RadialBarChart>
 
         </ResponsiveContainer>
 
-        <div>
 
-          <b>
-            {gauge.actual}
-          </b>
 
-      <div>
-  Máx: {gauge.maximo}
-</div>
-          <br />
+<div>
 
-          {gauge.porcentaje}%
+  <b>
+    {gauge.actual}
+  </b>
+
+  <div>
+    Máx: {gauge.maximo}
+  </div>
+
+  <div>
+    {gauge.porcentaje}%
+  </div>
+
+  {
+    (() => {
+
+      const trend = trends.find(
+        t => t.sistema === gauge.sistema
+      )
+
+      if (!trend)
+        return null
+
+      return (
+
+        <div
+          style={{
+            marginTop: "6px",
+            fontSize: "12px",
+            fontWeight: "bold"
+          }}
+        >
+
+          {
+            trend.direction === "up"
+              ? "🟢 +" + trend.trend.toFixed(1) + " NE/mes"
+              : trend.direction === "down"
+              ? "🔴 " + trend.trend.toFixed(1) + " NE/mes"
+              : "⚪ Estable"
+          }
 
         </div>
+
+      )
+
+    })()
+  }
+
+</div>
+     
+
+
+
 
       </div>
 
