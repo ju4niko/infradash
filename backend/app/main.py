@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import re
 import unicodedata
-from datetime import datetime
+from datetime import datetime, timedelta
 from .database import SessionLocal
 from .database import engine
 from .database import Base
@@ -577,6 +577,26 @@ def get_trends():
 
         current_value = history[-1]["qty"]
         last_snapshot_date = history[-1]["date"]
+        extinction_date = None
+
+        if (
+            trend < 0
+            and current_value > 0
+        ):
+
+            months_to_zero = (
+                current_value
+                / abs(trend)
+            )
+
+            extinction_date = (
+                last_snapshot_date
+                + timedelta(
+                    days=int(
+                        months_to_zero * 30.44
+                    )
+                )
+            )
 
         result.append({
 
@@ -594,12 +614,19 @@ def get_trends():
                 else "stable",
 
             "snapshots": n,
+
+
             "last_snapshot_date": (
                 last_snapshot_date.isoformat()
                 if last_snapshot_date
                 else None
-            )
+            ),
 
+            "extinction_date": (
+                extinction_date.isoformat()
+                if extinction_date
+                else None
+            )
 
         })
 
