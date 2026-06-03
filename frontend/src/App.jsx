@@ -585,20 +585,12 @@ return (
     dot={true}
   />
 
-  {
-    projectionData.length > 0 && (
 
-      <Line
-        data={projectionData}
-        type="linear"
-        dataKey="qty_nes"
-        strokeDasharray="8 4"
-        strokeWidth={2}
-        dot={true}
-      />
 
-    )
-  }
+
+
+
+
 
 </LineChart>
 
