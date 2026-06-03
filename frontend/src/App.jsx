@@ -10,23 +10,22 @@ import {
   ResponsiveContainer,
   RadialBarChart,
   RadialBar,
-  PolarAngleAxis,
-  Legend
+  PolarAngleAxis
 } from "recharts"
 
 function App() {
+
   const API_BASE = `http://${window.location.hostname}:8000`
+
   const [systems, setSystems] = useState([])
   const [snapshots, setSnapshots] = useState([])
   const [selectedSnapshot, setSelectedSnapshot] = useState("")
   const [selectedSystem, setSelectedSystem] = useState("")
   const [history, setHistory] = useState([])
-  const [globalHistory, setGlobalHistory] = useState([])
   const [gauges, setGauges] = useState([])
   const [loading, setLoading] = useState(true)
   const [trends, setTrends] = useState([])
   const [targetDates, setTargetDates] = useState({})
-
 
   useEffect(() => {
 
@@ -47,30 +46,23 @@ function App() {
       })
       .catch(console.error)
 
+    fetch(`${API_BASE}/api/gauges`)
+      .then((res) => res.json())
+      .then((data) => {
 
+        setGauges(data)
 
+      })
+      .catch(console.error)
 
-  fetch(`${API_BASE}/api/gauges`)
-    .then((res) => res.json())
-    .then((data) => {
+    fetch(`${API_BASE}/api/trends`)
+      .then((res) => res.json())
+      .then((data) => {
 
-      setGauges(data)
+        setTrends(data)
 
-    })
-    .catch(console.error)
-
-
-  fetch(`${API_BASE}/api/trends`)
-    .then((res) => res.json())
-    .then((data) => {
-
-      setTrends(data)
-
-    })
-    .catch(console.error)  
-
-
-
+      })
+      .catch(console.error)
 
   }, [])
 
@@ -90,12 +82,11 @@ function App() {
       .then((data) => {
 
         setHistory(data)
+
       })
       .catch(console.error)
 
   }, [selectedSystem])
-
-
 
   function loadSystems(snapshotDate) {
 
@@ -128,72 +119,56 @@ function App() {
     loadSystems(snapshotDate)
   }
 
-
-
-
   const selectedTrend = trends.find(
     t => t.sistema === selectedSystem
   )
 
+  let chartData = [...history]
 
-let chartData = [...history]
+  if (
+    selectedTrend &&
+    selectedTrend.extinction_date &&
+    history.length > 0
+  ) {
 
-if (
-  selectedTrend &&
-  selectedTrend.extinction_date &&
-  history.length > 0
-) {
+    chartData = [
 
-  const lastPoint =
-    history[history.length - 1]
+      ...history.map((point, index) => {
 
-  chartData = [
+        const isLast =
+          index === history.length - 1
 
-    ...history.map(point => ({
+        return {
 
-      snapshot_date:
-        point.snapshot_date,
+          snapshot_date:
+            point.snapshot_date,
 
-      qty_nes:
-        point.qty_nes,
+          qty_nes:
+            point.qty_nes,
 
-      qty_projection:
-        null
+          qty_projection:
+            isLast
+              ? point.qty_nes
+              : null
+        }
 
-    })),
+      }),
 
-    {
+      {
 
-      snapshot_date:
-        lastPoint.snapshot_date,
+        snapshot_date:
+          selectedTrend.extinction_date,
 
-      qty_nes:
-        null,
+        qty_nes:
+          null,
 
-      qty_projection:
-        lastPoint.qty_nes
+        qty_projection:
+          0
 
-    },
+      }
 
-    {
-
-      snapshot_date:
-        selectedTrend.extinction_date,
-
-      qty_nes:
-        null,
-
-      qty_projection:
-        0
-
-    }
-
-  ]
-
-}
-
-
-
+    ]
+  }
 
   return (
 
@@ -201,280 +176,257 @@ if (
 
       <h1>InfraDash</h1>
 
-<h2>Estado actual de sistemas</h2>
-
-<div
-  style={{
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fill, minmax(220px, 1fr))",
-    gap: "16px",
-    marginBottom: "30px"
-  }}
->
-
-  {
-    gauges.map((gauge) => (
+      <h2>Estado actual de sistemas</h2>
 
       <div
-        key={gauge.sistema}
         style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          padding: "10px",
-          textAlign: "center"
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fill, minmax(220px, 1fr))",
+          gap: "16px",
+          marginBottom: "30px"
         }}
       >
 
-        <div
-          style={{
-            fontWeight: "bold",
-            marginBottom: "10px",
-            fontSize: "14px"
-          }}
-        >
-          {gauge.sistema}
-        </div>
+        {
+          gauges.map((gauge) => (
 
-        <ResponsiveContainer
-          width="100%"
-          height={150}
-        >
+            <div
+              key={gauge.sistema}
+              style={{
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                padding: "10px",
+                textAlign: "center"
+              }}
+            >
 
-          <RadialBarChart
-            innerRadius="65%"
-            outerRadius="100%"
-            data={[
-              {
-                value: gauge.porcentaje
-              }
-            ]}
-            startAngle={180}
-            endAngle={0}
-          >
+              <div
+                style={{
+                  fontWeight: "bold",
+                  marginBottom: "10px",
+                  fontSize: "14px"
+                }}
+              >
+                {gauge.sistema}
+              </div>
 
-          <PolarAngleAxis
-            type="number"
-            domain={[0, 100]}
-            tick={false}
-          />
+              <ResponsiveContainer
+                width="100%"
+                height={150}
+              >
 
-          <RadialBar
-            dataKey="value"
-            background
-            cornerRadius={10}
-            fill={
-              gauge.porcentaje >= 80
-              ? "#00C853"
-              : gauge.porcentaje >= 50
-              ? "#FFD600"
-              : "#D50000"
-            }
-          />
+                <RadialBarChart
+                  innerRadius="65%"
+                  outerRadius="100%"
+                  data={[
+                    {
+                      value: gauge.porcentaje
+                    }
+                  ]}
+                  startAngle={180}
+                  endAngle={0}
+                >
 
-          </RadialBarChart>
+                  <PolarAngleAxis
+                    type="number"
+                    domain={[0, 100]}
+                    tick={false}
+                  />
 
-        </ResponsiveContainer>
+                  <RadialBar
+                    dataKey="value"
+                    background
+                    cornerRadius={10}
+                    fill={
+                      gauge.porcentaje >= 80
+                        ? "#00C853"
+                        : gauge.porcentaje >= 50
+                        ? "#FFD600"
+                        : "#D50000"
+                    }
+                  />
 
+                </RadialBarChart>
 
+              </ResponsiveContainer>
 
-<div>
+              <div>
 
-  <b>
-    {gauge.actual}
-  </b>
+                <b>
+                  {gauge.actual}
+                </b>
 
-  <div>
-    Máx: {gauge.maximo}
-  </div>
+                <div>
+                  Máx: {gauge.maximo}
+                </div>
 
-  <div>
-    {gauge.porcentaje}%
-  </div>
+                <div>
+                  {gauge.porcentaje}%
+                </div>
 
-  {
-    (() => {
+                {
+                  (() => {
 
+                    const trend = trends.find(
+                      t => t.sistema === gauge.sistema
+                    )
 
+                    if (!trend)
+                      return null
 
+                    let extinctionText = ""
+                    let requiredTrendText = ""
 
+                    if (
+                      trend.direction === "down" &&
+                      trend.trend < 0 &&
+                      gauge.actual > 0
+                    ) {
 
+                      const monthsToZero =
+                        gauge.actual / Math.abs(trend.trend)
 
-const trend = trends.find(
-  t => t.sistema === gauge.sistema
-)
+                      const extinctionDate = new Date(
+                        trend.last_snapshot_date
+                      )
 
-if (!trend)
-  return null
+                      extinctionDate.setMonth(
+                        extinctionDate.getMonth() +
+                        Math.round(monthsToZero)
+                      )
 
-let extinctionText = ""
-let requiredTrendText = ""
+                      extinctionText =
+                        extinctionDate.toISOString().slice(0, 10)
+                    }
 
-if (
-  trend.direction === "down" &&
-  trend.trend < 0 &&
-  gauge.actual > 0
-) {
+                    const targetDate = targetDates[gauge.sistema]
 
-  const monthsToZero =
-    gauge.actual / Math.abs(trend.trend)
+                    if (
+                      targetDate &&
+                      gauge.actual > 0
+                    ) {
 
-  const extinctionDate = new Date(
-    trend.last_snapshot_date
-  )
+                      const target = new Date(targetDate)
 
-  extinctionDate.setMonth(
-    extinctionDate.getMonth() +
-    Math.round(monthsToZero)
-  )
+                      const lastSnapshot = new Date(
+                        trend.last_snapshot_date
+                      )
 
-  extinctionText =
-    extinctionDate.toISOString().slice(0, 10)
-}
+                      const months =
+                        (
+                          target - lastSnapshot
+                        ) /
+                        (
+                          1000 * 60 * 60 * 24 * 30.44
+                        )
 
-const targetDate = targetDates[gauge.sistema]
+                      if (months > 0) {
 
-if (
-  targetDate &&
-  gauge.actual > 0
-) {
+                        const requiredTrend =
+                          -(gauge.actual / months)
 
-  const target = new Date(targetDate)
+                        requiredTrendText =
+                          requiredTrend.toFixed(1)
+                      }
+                    }
 
-  const lastSnapshot = new Date(
-    trend.last_snapshot_date
-  )
+                    return (
 
-  const months =
-    (
-      target - lastSnapshot
-    ) /
-    (
-      1000 * 60 * 60 * 24 * 30.44
-    )
+                      <div>
 
-  if (months > 0) {
+                        <div
+                          style={{
+                            marginTop: "6px",
+                            fontSize: "12px",
+                            fontWeight: "bold"
+                          }}
+                        >
 
-    const requiredTrend =
-      -(gauge.actual / months)
+                          {
+                            trend.direction === "up"
+                              ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
+                              : trend.direction === "down"
+                              ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
+                              : "➡️⚪ Estable"
+                          }
 
-    requiredTrendText =
-      requiredTrend.toFixed(1)
+                          {
+                            extinctionText && (
+                              <div
+                                style={{
+                                  marginTop: "4px",
+                                  color: "#D50000"
+                                }}
+                              >
+                                💀 Extinción estimada:
+                                <br />
+                                {extinctionText}
+                              </div>
+                            )
+                          }
 
-  }
+                        </div>
 
-}
+                        <div
+                          style={{
+                            marginTop: "8px",
+                            fontSize: "11px"
+                          }}
+                        >
 
-return (
+                          Fecha objetivo:
 
-  <div>
+                          <br />
 
-    <div
-      style={{
-        marginTop: "6px",
-        fontSize: "12px",
-        fontWeight: "bold"
-      }}
-    >
+                          <input
+                            type="date"
+                            value={
+                              targetDates[gauge.sistema] || ""
+                            }
+                            onChange={(e) =>
+                              setTargetDates({
+                                ...targetDates,
+                                [gauge.sistema]: e.target.value
+                              })
+                            }
+                          />
 
-      {
-        trend.direction === "up"
-          ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
-          : trend.direction === "down"
-          ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
-          : "➡️⚪ Estable"
-      }
+                        </div>
 
-      {
-        extinctionText && (
-          <div
-            style={{
-              marginTop: "4px",
-              color: "#D50000"
-            }}
-          >
-            💀 Extinción estimada:
-            <br />
-            {extinctionText}
-          </div>
-        )
-      }
+                        {
+                          requiredTrendText && (
 
-    </div>
+                            <div
+                              style={{
+                                marginTop: "6px",
+                                color: "#1565C0",
+                                fontWeight: "bold"
+                              }}
+                            >
+                              🎯 Tasa requerida:
+                              <br />
+                              {requiredTrendText} NE/mes
+                            </div>
 
-    <div
-      style={{
-        marginTop: "8px",
-        fontSize: "11px"
-      }}
-    >
+                          )
+                        }
 
-      Fecha objetivo:
+                      </div>
 
+                    )
 
+                  })()
+                }
 
-      <br />
+              </div>
 
-      <input
-        type="date"
-        value={
-          targetDates[gauge.sistema] || ""
+            </div>
+
+          ))
         }
-        onChange={(e) =>
-          setTargetDates({
-            ...targetDates,
-            [gauge.sistema]: e.target.value
-          })
-        }
-      />
-
-    </div>
-
-{
-  requiredTrendText && (
-
-    <div
-      style={{
-        marginTop: "6px",
-        color: "#1565C0",
-        fontWeight: "bold"
-      }}
-    >
-      🎯 Tasa requerida:
-      <br />
-      {requiredTrendText} NE/mes
-    </div>
-
-  )
-}
-
-  </div>
-
-)
-
-
-
-
-
-
-
-
-    })()
-  }
-
-</div>
-     
-
-
-
 
       </div>
-
-    ))
-  }
-
-</div>
-
 
       <div style={{ marginBottom: "20px" }}>
 
@@ -563,39 +515,32 @@ return (
 
             <ResponsiveContainer>
 
+              <LineChart data={chartData}>
 
+                <CartesianGrid strokeDasharray="3 3" />
 
+                <XAxis dataKey="snapshot_date" />
 
+                <YAxis />
 
-<LineChart>
+                <Tooltip />
 
-  <CartesianGrid strokeDasharray="3 3" />
+                <Line
+                  type="monotone"
+                  dataKey="qty_nes"
+                  strokeWidth={2}
+                  connectNulls={false}
+                />
 
-  <XAxis dataKey="snapshot_date" />
+                <Line
+                  type="linear"
+                  dataKey="qty_projection"
+                  strokeDasharray="8 4"
+                  strokeWidth={2}
+                  connectNulls={true}
+                />
 
-  <YAxis />
-
-  <Tooltip />
-
-  <Line
-    data={history}
-    type="monotone"
-    dataKey="qty_nes"
-    strokeWidth={2}
-    dot={true}
-  />
-
-
-
-
-
-
-
-
-</LineChart>
-
-
-
+              </LineChart>
 
             </ResponsiveContainer>
 
