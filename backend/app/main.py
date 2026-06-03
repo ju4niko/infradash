@@ -576,6 +576,7 @@ def get_trends():
         )
 
         current_value = history[-1]["qty"]
+        last_snapshot_date = history[-1]["date"]
 
         result.append({
 
