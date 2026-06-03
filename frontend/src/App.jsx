@@ -226,34 +226,84 @@ function App() {
   {
     (() => {
 
-      const trend = trends.find(
-        t => t.sistema === gauge.sistema
-      )
 
-      if (!trend)
-        return null
 
-      return (
 
+
+
+const trend = trends.find(
+  t => t.sistema === gauge.sistema
+)
+
+if (!trend)
+  return null
+
+let extinctionText = ""
+
+if (
+  trend.direction === "down" &&
+  trend.trend < 0 &&
+  gauge.actual > 0
+) {
+
+  const monthsToZero =
+    gauge.actual / Math.abs(trend.trend)
+
+  const extinctionDate = new Date()
+
+  extinctionDate.setMonth(
+    extinctionDate.getMonth() +
+    Math.round(monthsToZero)
+  )
+
+  extinctionText =
+    extinctionDate.toISOString().slice(0, 10)
+}
+
+return (
+
+  <div
+    style={{
+      marginTop: "6px",
+      fontSize: "12px",
+      fontWeight: "bold"
+    }}
+  >
+
+    {
+      trend.direction === "up"
+        ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
+        : trend.direction === "down"
+        ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
+        : "➡️⚪ Estable"
+    }
+
+    {
+      extinctionText && (
         <div
           style={{
-            marginTop: "6px",
-            fontSize: "12px",
-            fontWeight: "bold"
+            marginTop: "4px",
+            color: "#D50000"
           }}
         >
-
-          {
-            trend.direction === "up"
-              ? "🟢 +" + trend.trend.toFixed(1) + " NE/mes"
-              : trend.direction === "down"
-              ? "🔴 " + trend.trend.toFixed(1) + " NE/mes"
-              : "⚪ Estable"
-          }
-
+          💀 Extinción estimada:
+          <br />
+          {extinctionText}
         </div>
-
       )
+    }
+
+  </div>
+
+)
+
+
+
+
+
+
+
+
 
     })()
   }
