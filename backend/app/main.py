@@ -719,3 +719,169 @@ def save_target(request: TargetRequest):
     db.close()
 
     return result
+
+@app.get("/api/import-batch")
+def import_excel_batch():
+
+    uploads = Path("/app/data/uploads")
+
+    files = sorted(
+        uploads.glob("infra_*.xlsx")
+    )
+
+    result = []
+
+    db = SessionLocal()
+
+    valid_system_columns = {
+        column.name
+        for column in System.__table__.columns
+    }
+
+    for file in files:
+
+        match = re.search(
+            r"infra_(\d{4}-\d{2}-\d{2})\.xlsx$",
+            file.name
+        )
+
+        if not match:
+
+            result.append({
+                "file": file.name,
+                "status": "rejected",
+                "error": "filename must match infra_YYYY-MM-DD.xlsx"
+            })
+
+            continue
+
+        snapshot_date = datetime.strptime(
+            match.group(1),
+            "%Y-%m-%d"
+        ).date()
+
+        try:
+
+            snapshot = db.query(Snapshot).filter(
+                Snapshot.snapshot_date == snapshot_date
+            ).first()
+
+            if not snapshot:
+
+                snapshot = Snapshot(
+                    snapshot_date=snapshot_date,
+                    source_file=file.name
+                )
+
+                db.add(snapshot)
+                db.commit()
+                db.refresh(snapshot)
+
+            else:
+
+                snapshot.source_file = file.name
+
+                db.query(System).filter(
+                    System.snapshot_id == snapshot.id
+                ).delete()
+
+                db.commit()
+
+            df = pd.read_excel(
+                file,
+                engine="openpyxl"
+            )
+
+            df.columns = [
+                normalize_column(col)
+                for col in df.columns
+            ]
+
+            df = df.drop(
+                columns=["unnamed_14"],
+                errors="ignore"
+            )
+
+            df = df.astype(object)
+
+            df = df.map(
+                lambda x:
+                    x.strftime("%Y-%m-%d")
+                    if hasattr(x, "strftime")
+                    else x.strip()
+                    if isinstance(x, str)
+                    else x
+            )
+
+            if "qty_nes" in df.columns:
+
+                df["qty_nes_numeric"] = pd.to_numeric(
+                    df["qty_nes"],
+                    errors="coerce"
+                ).fillna(0)
+
+                df["qty_nes"] = (
+                    df["qty_nes_numeric"]
+                    .astype(int)
+                )
+
+            else:
+
+                df["qty_nes_numeric"] = 0
+                df["qty_nes"] = 0
+
+            if "release" in df.columns:
+
+                df["release"] = (
+                    df["release"]
+                    .fillna("")
+                    .astype(str)
+                )
+
+            imported = 0
+
+            for row in df.fillna("").to_dict(orient="records"):
+
+                system_name = row.get("sistemas", "")
+
+                if not system_name:
+                    continue
+
+                row["snapshot_id"] = snapshot.id
+
+                clean_row = {
+                    key: value
+                    for key, value in row.items()
+                    if key in valid_system_columns
+                }
+
+                new_system = System(**clean_row)
+
+                db.add(new_system)
+
+                imported += 1
+
+            db.commit()
+
+            result.append({
+                "file": file.name,
+                "status": "imported",
+                "snapshot_date": snapshot_date.isoformat(),
+                "rows": len(df),
+                "imported": imported,
+                "total_nes": int(df["qty_nes_numeric"].sum())
+            })
+
+        except Exception as e:
+
+            db.rollback()
+
+            result.append({
+                "file": file.name,
+                "status": "error",
+                "error": str(e)
+            })
+
+    db.close()
+
+    return result
