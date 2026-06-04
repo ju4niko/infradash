@@ -64,6 +64,28 @@ function App() {
       })
       .catch(console.error)
 
+
+    fetch(`${API_BASE}/api/targets`)
+      .then((res) => res.json())
+      .then((data) => {
+
+        const targetsMap = {}
+
+        data.forEach((item) => {
+
+          if (item.target_date) {
+
+            targetsMap[item.sistema] = item.target_date
+
+          }
+
+        })
+
+        setTargetDates(targetsMap)
+
+      })
+      .catch(console.error)
+
   }, [])
 
   useEffect(() => {
@@ -384,13 +406,32 @@ function App() {
                             value={
                               targetDates[gauge.sistema] || ""
                             }
-                            onChange={(e) =>
+
+                            onChange={(e) => {
+
+                              const newDate = e.target.value
+
                               setTargetDates({
                                 ...targetDates,
-                                [gauge.sistema]: e.target.value
+                                [gauge.sistema]: newDate
                               })
-                            }
-                          />
+
+                              fetch(`${API_BASE}/api/targets`, {
+                                method: "POST",
+                                headers: {
+                                  "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                  sistema: gauge.sistema,
+                                  target_date: newDate || null
+                                })
+                              })
+                                .then((res) => res.json())
+                                .catch(console.error)
+
+                            }}
+
+                            />
 
                         </div>
 
