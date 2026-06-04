@@ -260,14 +260,19 @@ function App() {
                     dataKey="value"
                     background
                     cornerRadius={10}
-                    fill={
-                      gauge.porcentaje >= 80
-                        ? "#00C853"
-                        : gauge.porcentaje >= 50
-                        ? "#FFD600"
-                        : "#D50000"
-                    }
-                  />
+
+           fill={
+  gauge.porcentaje >= 100
+    ? "#1565C0"
+    : gauge.porcentaje >= 66
+    ? "#D50000"
+    : gauge.porcentaje >= 33
+    ? "#FFD600"
+    : "#00C853"
+} 
+
+
+                />
 
                 </RadialBarChart>
 
@@ -367,10 +372,10 @@ function App() {
 
                           {
                             trend.direction === "up"
-                              ? "⬆️🟢 +" + trend.trend.toFixed(1) + " NE/mes"
+                              ? "⬆️ +" + trend.trend.toFixed(1) + " NE/mes"
                               : trend.direction === "down"
-                              ? "⬇️🔴 " + trend.trend.toFixed(1) + " NE/mes"
-                              : "➡️⚪ Estable"
+                              ? "⬇️ " + trend.trend.toFixed(1) + " NE/mes"
+                              : "➡️ Estable"
                           }
 
                           {
