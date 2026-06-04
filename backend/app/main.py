@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from pathlib import Path
@@ -11,7 +12,7 @@ from .database import SessionLocal
 from .database import engine
 from .database import Base
 from collections import defaultdict
-from .models import System, Snapshot
+from .models import System, Snapshot, SystemTarget
 from sqlalchemy import asc
 from typing import Optional
 
@@ -40,6 +41,11 @@ def normalize_column(name: str) -> str:
     name = name.strip("_")
     return name
 
+
+class TargetRequest(BaseModel):
+
+    sistema: str
+    target_date: Optional[str] = None
 
 @app.get("/")
 def root():
@@ -637,3 +643,79 @@ def get_trends():
         key=lambda x: x["sistema"]
     )
 
+@app.get("/api/targets")
+def get_targets():
+
+    db = SessionLocal()
+
+    targets = (
+        db.query(SystemTarget)
+        .order_by(SystemTarget.sistema.asc())
+        .all()
+    )
+
+    db.close()
+
+    return [
+        {
+            "sistema": target.sistema,
+            "target_date": (
+                target.target_date.isoformat()
+                if target.target_date
+                else None
+            )
+        }
+        for target in targets
+    ]
+
+@app.post("/api/targets")
+def save_target(request: TargetRequest):
+
+    db = SessionLocal()
+
+    target = (
+        db.query(SystemTarget)
+        .filter(
+            SystemTarget.sistema == request.sistema
+        )
+        .first()
+    )
+
+    parsed_date = None
+
+    if request.target_date:
+
+        parsed_date = datetime.strptime(
+            request.target_date,
+            "%Y-%m-%d"
+        ).date()
+
+    if target:
+
+        target.target_date = parsed_date
+
+    else:
+
+        target = SystemTarget(
+            sistema=request.sistema,
+            target_date=parsed_date
+        )
+
+        db.add(target)
+
+    db.commit()
+
+    db.refresh(target)
+
+    result = {
+        "sistema": target.sistema,
+        "target_date": (
+            target.target_date.isoformat()
+            if target.target_date
+            else None
+        )
+    }
+
+    db.close()
+
+    return result

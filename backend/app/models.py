@@ -84,3 +84,36 @@ class System(Base):
         "Snapshot",
         back_populates="systems"
     )
+
+class SystemTarget(Base):
+
+    __tablename__ = "system_targets"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    sistema = Column(
+        String,
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    target_date = Column(
+        Date,
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    updated_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
