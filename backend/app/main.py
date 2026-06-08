@@ -885,3 +885,38 @@ def import_excel_batch():
     db.close()
 
     return result
+
+@app.delete("/api/dev/flush-db")
+def flush_db():
+
+    db = SessionLocal()
+
+    try:
+
+        systems_deleted = db.query(System).delete()
+        snapshots_deleted = db.query(Snapshot).delete()
+        targets_deleted = db.query(SystemTarget).delete()
+
+        db.commit()
+
+        return {
+            "status": "ok",
+            "deleted": {
+                "systems": systems_deleted,
+                "snapshots": snapshots_deleted,
+                "targets": targets_deleted
+            }
+        }
+
+    except Exception as e:
+
+        db.rollback()
+
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+    finally:
+
+        db.close()
