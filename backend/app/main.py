@@ -12,7 +12,7 @@ from .database import SessionLocal
 from .database import engine
 from .database import Base
 from collections import defaultdict
-from .models import System, Snapshot, SystemTarget
+from .models import System, Snapshot, SystemTarget, SubSystem
 from sqlalchemy import asc
 from typing import Optional
 
@@ -720,13 +720,15 @@ def save_target(request: TargetRequest):
 
     return result
 
+
+
 @app.get("/api/import-batch")
 def import_excel_batch():
 
     uploads = Path("/app/data/uploads")
 
     files = sorted(
-        uploads.glob("infra_*.xlsx")
+        uploads.glob("*.xlsx")
     )
 
     result = []
@@ -738,27 +740,52 @@ def import_excel_batch():
         for column in System.__table__.columns
     }
 
+    valid_subsystem_columns = {
+        column.name
+        for column in SubSystem.__table__.columns
+    }
+
     for file in files:
 
-        match = re.search(
-            r"infra_(\d{4}-\d{2}-\d{2})\.xlsx$",
+        infra_match = re.search(
+            r"^infra_(\d{4}-\d{2}-\d{2})\.xlsx$",
             file.name
         )
 
-        if not match:
+        subinfra_match = re.search(
+            r"^subinfra_(.+)_(\d{4}-\d{2}-\d{2})\.xlsx$",
+            file.name
+        )
+
+        if not infra_match and not subinfra_match:
 
             result.append({
                 "file": file.name,
                 "status": "rejected",
-                "error": "filename must match infra_YYYY-MM-DD.xlsx"
+                "error": "filename must match infra_YYYY-MM-DD.xlsx or subinfra_NOMBRE_YYYY-MM-DD.xlsx"
             })
 
             continue
 
-        snapshot_date = datetime.strptime(
-            match.group(1),
-            "%Y-%m-%d"
-        ).date()
+        is_subinfra = subinfra_match is not None
+
+        if is_subinfra:
+
+            parent_system = subinfra_match.group(1)
+
+            snapshot_date = datetime.strptime(
+                subinfra_match.group(2),
+                "%Y-%m-%d"
+            ).date()
+
+        else:
+
+            parent_system = None
+
+            snapshot_date = datetime.strptime(
+                infra_match.group(1),
+                "%Y-%m-%d"
+            ).date()
 
         try:
 
@@ -776,16 +803,6 @@ def import_excel_batch():
                 db.add(snapshot)
                 db.commit()
                 db.refresh(snapshot)
-
-            else:
-
-                snapshot.source_file = file.name
-
-                db.query(System).filter(
-                    System.snapshot_id == snapshot.id
-                ).delete()
-
-                db.commit()
 
             df = pd.read_excel(
                 file,
@@ -840,32 +857,75 @@ def import_excel_batch():
 
             imported = 0
 
-            for row in df.fillna("").to_dict(orient="records"):
+            if is_subinfra:
 
-                system_name = row.get("sistemas", "")
+                db.query(SubSystem).filter(
+                    SubSystem.snapshot_id == snapshot.id,
+                    SubSystem.parent_system == parent_system
+                ).delete()
 
-                if not system_name:
-                    continue
+                db.commit()
 
-                row["snapshot_id"] = snapshot.id
+                for row in df.fillna("").to_dict(orient="records"):
 
-                clean_row = {
-                    key: value
-                    for key, value in row.items()
-                    if key in valid_system_columns
-                }
+                    system_name = row.get("sistemas", "")
 
-                new_system = System(**clean_row)
+                    if not system_name:
+                        continue
 
-                db.add(new_system)
+                    row["snapshot_id"] = snapshot.id
+                    row["parent_system"] = parent_system
 
-                imported += 1
+                    clean_row = {
+                        key: value
+                        for key, value in row.items()
+                        if key in valid_subsystem_columns
+                    }
+
+                    new_subsystem = SubSystem(**clean_row)
+
+                    db.add(new_subsystem)
+
+                    imported += 1
+
+            else:
+
+                snapshot.source_file = file.name
+
+                db.query(System).filter(
+                    System.snapshot_id == snapshot.id
+                ).delete()
+
+                db.commit()
+
+                for row in df.fillna("").to_dict(orient="records"):
+
+                    system_name = row.get("sistemas", "")
+
+                    if not system_name:
+                        continue
+
+                    row["snapshot_id"] = snapshot.id
+
+                    clean_row = {
+                        key: value
+                        for key, value in row.items()
+                        if key in valid_system_columns
+                    }
+
+                    new_system = System(**clean_row)
+
+                    db.add(new_system)
+
+                    imported += 1
 
             db.commit()
 
             result.append({
                 "file": file.name,
                 "status": "imported",
+                "type": "subinfra" if is_subinfra else "infra",
+                "parent_system": parent_system,
                 "snapshot_date": snapshot_date.isoformat(),
                 "rows": len(df),
                 "imported": imported,
@@ -886,13 +946,16 @@ def import_excel_batch():
 
     return result
 
+
+
+
 @app.delete("/api/dev/flush-db")
 def flush_db():
 
     db = SessionLocal()
 
     try:
-
+        subsystems_deleted = db.query(SubSystem).delete()
         systems_deleted = db.query(System).delete()
         snapshots_deleted = db.query(Snapshot).delete()
         targets_deleted = db.query(SystemTarget).delete()
@@ -902,6 +965,7 @@ def flush_db():
         return {
             "status": "ok",
             "deleted": {
+                "subsystems": subsystems_deleted,
                 "systems": systems_deleted,
                 "snapshots": snapshots_deleted,
                 "targets": targets_deleted
@@ -920,3 +984,85 @@ def flush_db():
     finally:
 
         db.close()
+
+
+@app.get("/api/subsystems/parents")
+def get_subsystem_parents(
+    snapshot_date: Optional[str] = None
+):
+
+    db = SessionLocal()
+
+    query = db.query(
+        SubSystem.parent_system
+    ).distinct()
+
+    if snapshot_date:
+
+        snapshot = db.query(Snapshot).filter(
+            Snapshot.snapshot_date ==
+            datetime.strptime(
+                snapshot_date,
+                "%Y-%m-%d"
+            ).date()
+        ).first()
+
+        if snapshot:
+
+            query = query.filter(
+                SubSystem.snapshot_id == snapshot.id
+            )
+
+        else:
+
+            db.close()
+
+            return []
+
+    parents = query.order_by(
+        SubSystem.parent_system.asc()
+    ).all()
+
+    db.close()
+
+    return [
+        row.parent_system
+        for row in parents
+    ]
+
+
+@app.get("/api/subsystems/{parent_system}")
+def get_subsystems(
+    parent_system: str,
+    snapshot_date: Optional[str] = None
+):
+
+    db = SessionLocal()
+
+    query = db.query(SubSystem).filter(
+        SubSystem.parent_system == parent_system
+    )
+
+    if snapshot_date:
+
+        snapshot = db.query(Snapshot).filter(
+            Snapshot.snapshot_date ==
+            datetime.strptime(
+                snapshot_date,
+                "%Y-%m-%d"
+            ).date()
+        ).first()
+
+        if snapshot:
+
+            query = query.filter(
+                SubSystem.snapshot_id == snapshot.id
+            )
+
+    subsystems = query.all()
+
+    db.close()
+
+    return subsystems
+
+

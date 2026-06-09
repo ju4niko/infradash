@@ -117,3 +117,44 @@ class SystemTarget(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+
+class SubSystem(Base):
+
+    __tablename__ = "subsystems"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    snapshot_id = Column(
+        Integer,
+        ForeignKey("snapshots.id")
+    )
+
+    parent_system = Column(
+        String,
+        index=True
+    )
+
+    imo = Column(String)
+    detalles_tecnologia = Column(String)
+
+    sistemas = Column(String)
+    vendor = Column(String)
+    soporte = Column(String)
+    partner = Column(String)
+    release = Column(String)
+
+    qty_nes = Column(String)
+    qty_nes_numeric = Column(Float)
+
+    fault_manager = Column(String)
+    fault_unificado_si_o_no = Column(String)
+
+    tecnologia = Column(String)
+    infra = Column(String)
+    redundancia = Column(String)
+
+    comentarios = Column(String)
