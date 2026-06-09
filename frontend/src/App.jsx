@@ -17,6 +17,13 @@ function App() {
 
   const API_BASE = `http://${window.location.hostname}:8000`
 
+  const params = new URLSearchParams(window.location.search)
+
+  const subinfraName = params.get("subinfra")
+  const subinfraSnapshotDate = params.get("snapshot_date")
+
+  const isSubinfraView = subinfraName !== null
+
   const [systems, setSystems] = useState([])
   const [snapshots, setSnapshots] = useState([])
   const [selectedSnapshot, setSelectedSnapshot] = useState("")
@@ -26,6 +33,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [trends, setTrends] = useState([])
   const [targetDates, setTargetDates] = useState({})
+  const [subsystemParents, setSubsystemParents] = useState([])
 
   useEffect(() => {
 
@@ -114,21 +122,44 @@ function App() {
 
     setLoading(true)
 
-    fetch(
-      `${API_BASE}/api/systems?snapshot_date=${snapshotDate}`
-    )
+    const url = isSubinfraView
+      ? `${API_BASE}/api/subsystems/${encodeURIComponent(subinfraName)}?snapshot_date=${snapshotDate}`
+      : `${API_BASE}/api/systems?snapshot_date=${snapshotDate}`
+
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
 
         setSystems(data)
 
-        setLoading(false)
+        if (isSubinfraView) {
+
+          setSubsystemParents([])
+
+          setLoading(false)
+
+          return
+        }
+
+        return fetch(
+          `${API_BASE}/api/subsystems/parents?snapshot_date=${snapshotDate}`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+
+            setSubsystemParents(data)
+
+            setLoading(false)
+
+          })
+
       })
       .catch((err) => {
 
         console.error(err)
 
         setLoading(false)
+
       })
   }
 
@@ -634,7 +665,36 @@ function App() {
                     <tr key={system.id}>
 
                       <td>{system.id}</td>
-                      <td>{system.sistemas}</td>
+
+
+
+
+                    
+
+
+          <td>
+
+            {
+              subsystemParents.includes(
+                system.sistemas
+              )
+                ? (
+
+                  <a
+                    href={`/?subinfra=${encodeURIComponent(system.sistemas)}&snapshot_date=${selectedSnapshot}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {system.sistemas}
+                  </a>
+
+                )
+                : system.sistemas
+            }
+
+          </td>
+
+
                       <td>{system.vendor}</td>
                       <td>{system.tecnologia}</td>
                       <td>{system.qty_nes_numeric}</td>
