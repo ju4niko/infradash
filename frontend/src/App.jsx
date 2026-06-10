@@ -45,11 +45,12 @@ function App() {
 
         if (data.length > 0) {
 
-          const latest = data[0].snapshot_date
+          const initialSnapshot =
+            subinfraSnapshotDate || data[0].snapshot_date
 
-          setSelectedSnapshot(latest)
+          setSelectedSnapshot(initialSnapshot)
 
-          loadSystems(latest)
+          loadSystems(initialSnapshot)
         }
       })
       .catch(console.error)
@@ -96,27 +97,34 @@ function App() {
 
   }, [])
 
-  useEffect(() => {
 
-    if (!selectedSystem) {
+useEffect(() => {
 
-      setHistory([])
+  if (!selectedSystem) {
 
-      return
-    }
+    setHistory([])
 
-    fetch(
-      `${API_BASE}/api/history/${encodeURIComponent(selectedSystem)}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
+    return
+  }
 
-        setHistory(data)
+  const url = isSubinfraView
 
-      })
-      .catch(console.error)
+    ? `${API_BASE}/api/subhistory/${encodeURIComponent(subinfraName)}/${encodeURIComponent(selectedSystem)}`
 
-  }, [selectedSystem])
+    : `${API_BASE}/api/history/${encodeURIComponent(selectedSystem)}`
+
+  fetch(url)
+    .then((res) => res.json())
+    .then((data) => {
+
+      setHistory(data)
+
+    })
+    .catch(console.error)
+
+}, [selectedSystem])
+
+
 
   function loadSystems(snapshotDate) {
 

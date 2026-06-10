@@ -1065,4 +1065,42 @@ def get_subsystems(
 
     return subsystems
 
+@app.get("/api/subhistory/{parent_system}/{subsystem_name}")
+def get_subsystem_history(
+    parent_system: str,
+    subsystem_name: str
+):
+
+    db = SessionLocal()
+
+    rows = (
+        db.query(
+            Snapshot.snapshot_date,
+            SubSystem.qty_nes_numeric
+        )
+        .join(
+            Snapshot,
+            SubSystem.snapshot_id == Snapshot.id
+        )
+        .filter(
+            SubSystem.parent_system == parent_system
+        )
+        .filter(
+            SubSystem.sistemas == subsystem_name
+        )
+        .order_by(
+            asc(Snapshot.snapshot_date)
+        )
+        .all()
+    )
+
+    db.close()
+
+    return [
+        {
+            "snapshot_date": row.snapshot_date,
+            "qty_nes": row.qty_nes_numeric
+        }
+        for row in rows
+    ]
 
