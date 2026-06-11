@@ -1103,4 +1103,264 @@ def get_subsystem_history(
         }
         for row in rows
     ]
+@app.get("/api/subtrends/{parent_system}")
+def get_subtrends(parent_system: str):
+
+    db = SessionLocal()
+
+    rows = (
+        db.query(
+            Snapshot.snapshot_date,
+            SubSystem.sistemas,
+            SubSystem.qty_nes_numeric
+        )
+        .join(
+            Snapshot,
+            SubSystem.snapshot_id == Snapshot.id
+        )
+        .filter(
+            SubSystem.parent_system == parent_system
+        )
+        .order_by(
+            Snapshot.snapshot_date.asc()
+        )
+        .all()
+    )
+
+    systems = defaultdict(list)
+
+    for row in rows:
+
+        systems[row.sistemas].append({
+            "date": row.snapshot_date,
+            "qty": row.qty_nes_numeric
+        })
+
+    result = []
+
+    for system_name, history in systems.items():
+
+        if len(history) < 2:
+            continue
+
+        n = len(history)
+
+        x = []
+        y = []
+
+        base_date = history[0]["date"]
+
+        for point in history:
+
+            days = (
+                point["date"]
+                - base_date
+            ).days
+
+            x.append(days)
+            y.append(point["qty"])
+
+        sum_x = sum(x)
+        sum_y = sum(y)
+
+        sum_xy = sum(
+            xi * yi
+            for xi, yi in zip(x, y)
+        )
+
+        sum_x2 = sum(
+            xi * xi
+            for xi in x
+        )
+
+        denominator = (
+            n * sum_x2
+            - sum_x * sum_x
+        )
+
+        if denominator == 0:
+            continue
+
+        slope_per_day = (
+            (
+                n * sum_xy
+                - sum_x * sum_y
+            )
+            / denominator
+        )
+
+        trend = round(
+            slope_per_day * 30.44,
+            2
+        )
+
+        current_value = history[-1]["qty"]
+        last_snapshot_date = history[-1]["date"]
+
+        extinction_date = None
+
+        if (
+            trend < 0
+            and current_value > 0
+        ):
+
+            months_to_zero = (
+                current_value
+                / abs(trend)
+            )
+
+            extinction_date = (
+                last_snapshot_date
+                + timedelta(
+                    days=int(
+                        months_to_zero * 30.44
+                    )
+                )
+            )
+
+        result.append({
+            "sistema": system_name,
+            "actual": current_value,
+            "trend": trend,
+            "direction":
+                "up"
+                if trend > 0
+                else "down"
+                if trend < 0
+                else "stable",
+            "snapshots": n,
+            "last_snapshot_date": (
+                last_snapshot_date.isoformat()
+                if last_snapshot_date
+                else None
+            ),
+            "extinction_date": (
+                extinction_date.isoformat()
+                if extinction_date
+                else None
+            )
+        })
+
+    db.close()
+
+    return sorted(
+        result,
+        key=lambda x: x["sistema"]
+    )
+
+@app.get("/api/subgauges/{parent_system}")
+def get_subgauges(parent_system: str):
+
+    db = SessionLocal()
+
+    snapshots = (
+        db.query(Snapshot)
+        .order_by(
+            Snapshot.snapshot_date.desc()
+        )
+        .all()
+    )
+
+    if not snapshots:
+
+        db.close()
+
+        return []
+
+    latest_snapshot = snapshots[0]
+
+    current_subsystems = (
+        db.query(SubSystem)
+        .filter(
+            SubSystem.snapshot_id == latest_snapshot.id
+        )
+        .filter(
+            SubSystem.parent_system == parent_system
+        )
+        .all()
+    )
+
+    result = []
+
+    for subsystem in current_subsystems:
+
+        max_qty = (
+            db.query(
+                SubSystem.qty_nes_numeric
+            )
+            .filter(
+                SubSystem.parent_system == parent_system
+            )
+            .filter(
+                SubSystem.sistemas == subsystem.sistemas
+            )
+            .order_by(
+                SubSystem.qty_nes_numeric.desc()
+            )
+            .first()
+        )
+
+        min_qty = (
+            db.query(
+                SubSystem.qty_nes_numeric
+            )
+            .filter(
+                SubSystem.parent_system == parent_system
+            )
+            .filter(
+                SubSystem.sistemas == subsystem.sistemas
+            )
+            .order_by(
+                SubSystem.qty_nes_numeric.asc()
+            )
+            .first()
+        )
+
+        historical_max = (
+            max_qty[0]
+            if max_qty and max_qty[0] is not None
+            else 0
+        )
+
+        historical_min = (
+            min_qty[0]
+            if min_qty and min_qty[0] is not None
+            else 0
+        )
+
+        if historical_max == historical_min:
+            continue
+
+        percentage = 0
+
+        if historical_max > 0:
+
+            percentage = round(
+                (
+                    subsystem.qty_nes_numeric
+                    / historical_max
+                ) * 100,
+                1
+            )
+
+        result.append({
+
+            "sistema": subsystem.sistemas,
+
+            "actual": subsystem.qty_nes_numeric,
+
+            "maximo": historical_max,
+
+            "porcentaje": percentage,
+
+            "snapshot_date": latest_snapshot.snapshot_date
+
+        })
+
+    db.close()
+
+    return sorted(
+        result,
+        key=lambda x: x["sistema"]
+    )
 

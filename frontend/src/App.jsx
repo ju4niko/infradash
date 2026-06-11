@@ -55,7 +55,11 @@ function App() {
       })
       .catch(console.error)
 
-    fetch(`${API_BASE}/api/gauges`)
+    const gaugesUrl = isSubinfraView
+      ? `${API_BASE}/api/subgauges/${encodeURIComponent(subinfraName)}`
+      : `${API_BASE}/api/gauges`
+
+    fetch(gaugesUrl)
       .then((res) => res.json())
       .then((data) => {
 
@@ -63,8 +67,12 @@ function App() {
 
       })
       .catch(console.error)
+        
+    const trendsUrl = isSubinfraView
+      ? `${API_BASE}/api/subtrends/${encodeURIComponent(subinfraName)}`
+      : `${API_BASE}/api/trends`
 
-    fetch(`${API_BASE}/api/trends`)
+    fetch(trendsUrl)
       .then((res) => res.json())
       .then((data) => {
 
@@ -72,6 +80,7 @@ function App() {
 
       })
       .catch(console.error)
+
 
 
     fetch(`${API_BASE}/api/targets`)
