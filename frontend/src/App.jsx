@@ -34,6 +34,8 @@ function App() {
   const [trends, setTrends] = useState([])
   const [targetDates, setTargetDates] = useState({})
   const [subsystemParents, setSubsystemParents] = useState([])
+  const [expandedSystems, setExpandedSystems] = useState({})
+  const [subsystemsByParent, setSubsystemsByParent] = useState({})
 
   useEffect(() => {
 
@@ -189,6 +191,38 @@ useEffect(() => {
     loadSystems(snapshotDate)
   }
 
+
+  function toggleSubinfra(systemName) {
+
+    const isExpanded = expandedSystems[systemName]
+
+    setExpandedSystems({
+      ...expandedSystems,
+      [systemName]: !isExpanded
+    })
+
+    if (
+      isExpanded ||
+      subsystemsByParent[systemName]
+    ) {
+      return
+    }
+
+    fetch(
+      `${API_BASE}/api/subsystems/${encodeURIComponent(systemName)}?snapshot_date=${selectedSnapshot}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+
+        setSubsystemsByParent({
+          ...subsystemsByParent,
+          [systemName]: data
+        })
+
+      })
+      .catch(console.error)
+  }
+
   const selectedTrend = trends.find(
     t => t.sistema === selectedSystem
   )
@@ -245,6 +279,12 @@ useEffect(() => {
     <div style={{ padding: "20px" }}>
 
       <h1>InfraDash</h1>
+
+
+
+
+
+
 
       <h2>Estado actual de sistemas</h2>
 
@@ -677,49 +717,114 @@ useEffect(() => {
               <tbody>
 
                 {
-                  systems.map((system) => (
+ 
+systems.map((system) => (
 
-                    <tr key={system.id}>
+  <>
 
-                      <td>{system.id}</td>
+    <tr key={system.id}>
 
+      <td>{system.id}</td>
 
+      <td>
 
+        {
+          subsystemParents.includes(
+            system.sistemas
+          )
+            ? (
 
-                    
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px"
+                }}
+              >
 
+                <button
+                  onClick={() =>
+                    toggleSubinfra(
+                      system.sistemas
+                    )
+                  }
+                >
+                  {
+                    expandedSystems[
+                      system.sistemas
+                    ]
+                      ? "▼"
+                      : "▶"
+                  }
+                </button>
 
-          <td>
+                <span>
+                  {system.sistemas}
+                </span>
 
-            {
-              subsystemParents.includes(
-                system.sistemas
-              )
-                ? (
+                <a
+                  href={`/?subinfra=${encodeURIComponent(system.sistemas)}&snapshot_date=${selectedSnapshot}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Abrir
+                </a>
 
-                  <a
-                    href={`/?subinfra=${encodeURIComponent(system.sistemas)}&snapshot_date=${selectedSnapshot}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {system.sistemas}
-                  </a>
+              </div>
 
-                )
-                : system.sistemas
-            }
+            )
+            : system.sistemas
+        }
 
+      </td>
+
+      <td>{system.vendor}</td>
+      <td>{system.tecnologia}</td>
+      <td>{system.qty_nes_numeric}</td>
+      <td>{system.infra}</td>
+      <td>{system.soporte}</td>
+
+    </tr>
+
+    {
+      expandedSystems[system.sistemas] &&
+      subsystemsByParent[system.sistemas] &&
+      subsystemsByParent[system.sistemas].map((subsystem) => (
+
+        <tr key={`sub-${subsystem.id}`}>
+
+          <td></td>
+
+          <td
+            style={{
+              paddingLeft: "32px",
+              fontStyle: "italic"
+            }}
+          >
+            ↳ {subsystem.sistemas}
           </td>
 
+          <td>{subsystem.vendor}</td>
+          <td>{subsystem.tecnologia}</td>
+          <td>{subsystem.qty_nes_numeric}</td>
+          <td>{subsystem.infra}</td>
+          <td>{subsystem.soporte}</td>
 
-                      <td>{system.vendor}</td>
-                      <td>{system.tecnologia}</td>
-                      <td>{system.qty_nes_numeric}</td>
-                      <td>{system.infra}</td>
-                      <td>{system.soporte}</td>
+        </tr>
 
-                    </tr>
-                  ))
+      ))
+    }
+
+  </>
+
+))
+
+
+
+
+
+
+
                 }
 
               </tbody>
