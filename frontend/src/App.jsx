@@ -762,13 +762,19 @@ systems.map((system) => (
                   {system.sistemas}
                 </span>
 
-                <a
-                  href={`/?subinfra=${encodeURIComponent(system.sistemas)}&snapshot_date=${selectedSnapshot}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Abrir
-                </a>
+
+i<button
+  onClick={() =>
+    window.open(
+      `/?subinfra=${encodeURIComponent(system.sistemas)}&snapshot_date=${selectedSnapshot}`,
+      "_blank"
+    )
+  }
+>
+  [🔍 Ver]
+</button>
+
+
 
               </div>
 
@@ -791,18 +797,25 @@ systems.map((system) => (
       subsystemsByParent[system.sistemas] &&
       subsystemsByParent[system.sistemas].map((subsystem) => (
 
-        <tr key={`sub-${subsystem.id}`}>
-
+<tr
+  key={`sub-${subsystem.id}`}
+  style={{
+    borderTop: "1px dashed currentColor",
+    borderBottom: "1px dashed currentColor"
+  }}
+>
           <td></td>
 
-          <td
-            style={{
-              paddingLeft: "32px",
-              fontStyle: "italic"
-            }}
-          >
-            ↳ {subsystem.sistemas}
-          </td>
+<td
+  style={{
+    paddingLeft: "32px",
+    fontStyle: "italic",
+    borderLeft: "2px solid currentColor",
+    opacity: 0.85
+  }}
+>
+  ↳ {subsystem.sistemas}
+</td>
 
           <td>{subsystem.vendor}</td>
           <td>{subsystem.tecnologia}</td>
