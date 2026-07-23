@@ -47,6 +47,11 @@ class TargetRequest(BaseModel):
     sistema: str
     target_date: Optional[str] = None
 
+class AliasRequest(BaseModel):
+
+    sistema: str
+    alias: Optional[str] = None
+
 @app.get("/")
 def root():
 
@@ -286,6 +291,23 @@ def get_systems(
         )
 
     systems = query.all()
+
+    preferences = {
+        p.sistema: p
+        for p in db.query(SystemPreference).all()
+    }
+
+
+    for system in systems:
+
+        preference = preferences.get(system.sistemas)
+
+        system.alias = (
+            preference.alias
+            if preference
+            else None
+        )
+
 
     db.close()
 
@@ -1362,3 +1384,55 @@ def get_subgauges(parent_system: str):
         key=lambda x: x["sistema"]
     )
 
+@app.post("/api/alias")
+def save_alias(request: AliasRequest):
+
+    db = SessionLocal()
+
+    preference = (
+        db.query(SystemPreference)
+        .filter(
+            SystemPreference.sistema == request.sistema
+        )
+        .first()
+    )
+
+    if preference:
+
+        preference.alias = request.alias
+
+    else:
+
+        preference = SystemPreference(
+            sistema=request.sistema,
+            alias=request.alias
+        )
+
+        db.add(preference)
+
+    db.commit()
+
+    db.refresh(preference)
+
+    result = {
+        "sistema": preference.sistema,
+        "alias": preference.alias
+    }
+
+    db.close()
+
+    return result
+@app.get("/api/preferences")
+def get_preferences():
+
+    db = SessionLocal()
+
+    preferences = (
+        db.query(SystemPreference)
+        .order_by(SystemPreference.sistema.asc())
+        .all()
+    )
+
+    db.close()
+
+    return preferences
