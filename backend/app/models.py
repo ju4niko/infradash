@@ -118,6 +118,15 @@ class SystemTarget(Base):
         onupdate=datetime.utcnow
     )
 
+class SystemPreference(Base):
+    __tablename__ = "system_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    sistema = Column(String, unique=True, nullable=False, index=True)
+
+    target_date = Column(Date, nullable=True)
+    alias = Column(String, nullable=True)
+
 class SubSystem(Base):
 
     __tablename__ = "subsystems"

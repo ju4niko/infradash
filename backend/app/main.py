@@ -12,7 +12,7 @@ from .database import SessionLocal
 from .database import engine
 from .database import Base
 from collections import defaultdict
-from .models import System, Snapshot, SystemTarget, SubSystem
+from .models import System, Snapshot, SystemTarget, SubSystem, SystemPreference
 from sqlalchemy import asc
 from typing import Optional
 
@@ -647,13 +647,11 @@ def get_trends():
 def get_targets():
 
     db = SessionLocal()
-
     targets = (
-        db.query(SystemTarget)
-        .order_by(SystemTarget.sistema.asc())
+        db.query(SystemPreference)
+        .order_by(SystemPreference.sistema.asc())
         .all()
     )
-
     db.close()
 
     return [
@@ -674,9 +672,9 @@ def save_target(request: TargetRequest):
     db = SessionLocal()
 
     target = (
-        db.query(SystemTarget)
+        db.query(SystemPreference)
         .filter(
-            SystemTarget.sistema == request.sistema
+            SystemPreference.sistema == request.sistema
         )
         .first()
     )
@@ -696,7 +694,7 @@ def save_target(request: TargetRequest):
 
     else:
 
-        target = SystemTarget(
+        target = SystemPreference(
             sistema=request.sistema,
             target_date=parsed_date
         )
