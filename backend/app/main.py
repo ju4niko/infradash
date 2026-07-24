@@ -407,7 +407,10 @@ def get_gauges():
         )
         .all()
     )
-
+    preferences = {
+        p.sistema: p
+        for p in db.query(SystemPreference).all()
+    }
     result = []
 
     for system in current_systems:
@@ -466,10 +469,17 @@ def get_gauges():
                 ) * 100,
                 1
             )
+        preference = preferences.get(system.sistemas)
 
         result.append({
 
             "sistema": system.sistemas,
+
+            "alias": (
+                preference.alias
+                if preference
+                else None
+            ),
 
             "actual": system.qty_nes_numeric,
 

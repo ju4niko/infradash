@@ -351,7 +351,7 @@ useEffect(() => {
                   fontSize: "14px"
                 }}
               >
-                {gauge.sistema}
+                {gauge.alias || gauge.sistema}
               </div>
 
               <ResponsiveContainer
@@ -801,9 +801,13 @@ systems.map((system) => (
         if (e.key === "Enter") {
           saveAlias(system)
         }
+  if (e.key === "Escape") {
+    setEditingAlias(null)
+  }
+        
 
       }}
-
+onBlur={() => setEditingAlias(null)}
 
     />
 
@@ -862,9 +866,12 @@ i<button
         if (e.key === "Enter") {
           saveAlias(system)
         }
+  if (e.key === "Escape") {
+    setEditingAlias(null)
+  }
 
       }}
-
+onBlur={() => setEditingAlias(null)}
 
     />
 
