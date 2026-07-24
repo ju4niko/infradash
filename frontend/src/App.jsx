@@ -36,6 +36,8 @@ function App() {
   const [subsystemParents, setSubsystemParents] = useState([])
   const [expandedSystems, setExpandedSystems] = useState({})
   const [subsystemsByParent, setSubsystemsByParent] = useState({})
+  const [editingAlias, setEditingAlias] = useState(null)
+  const [aliasValue, setAliasValue] = useState("")
 
   useEffect(() => {
 
@@ -190,6 +192,37 @@ useEffect(() => {
 
     loadSystems(snapshotDate)
   }
+
+
+  function saveAlias(system) {
+
+    fetch(`${API_BASE}/api/alias`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        sistema: system.sistemas,
+        alias: aliasValue
+      })
+    })
+      .then(() => {
+
+        setSystems( 
+          systems.map(s =>
+            s.sistemas === system.sistemas
+              ? { ...s, alias: aliasValue }
+              : s
+          )
+        )
+
+        setEditingAlias(null)
+
+      })
+      .catch(console.error)
+
+  }
+
 
 
   function toggleSubinfra(systemName) {
@@ -607,24 +640,20 @@ useEffect(() => {
               Seleccionar sistema
             </option>
 
-            {
-              [...new Set(
-                systems.map(
-                  s => s.sistemas
-                )
-              )]
-                .sort()
-                .map(system => (
+{
+  systems
+    .sort((a, b) => a.sistemas.localeCompare(b.sistemas))
+    .map((system) => (
 
-                  <option
-                    key={system}
-                    value={system}
-                  >
-                    {system}
-                  </option>
+      <option
+        key={system.sistemas}
+        value={system.sistemas}
+      >
+        {system.alias || system.sistemas}
+      </option>
 
-                ))
-            }
+    ))
+}
 
           </select>
 
@@ -758,9 +787,48 @@ systems.map((system) => (
                   }
                 </button>
 
-                <span>
-                  {system.sistemas}
-                </span>
+
+
+{
+  editingAlias === system.sistemas ? (
+
+    <input
+      autoFocus
+      value={aliasValue}
+      onChange={(e) => setAliasValue(e.target.value)}
+      onKeyDown={(e) => {
+
+        if (e.key === "Enter") {
+          saveAlias(system)
+        }
+
+      }}
+
+
+    />
+
+  ) : (
+
+    <span
+      onDoubleClick={() => {
+
+        setEditingAlias(system.sistemas)
+
+        setAliasValue(
+          system.alias || system.sistemas
+        )
+
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      {system.alias || system.sistemas}
+    </span>
+
+  )
+}
+
+
+
 
 
 i<button
@@ -779,7 +847,45 @@ i<button
               </div>
 
             )
-            : system.sistemas
+
+
+: (
+  editingAlias === system.sistemas ? (
+
+    <input
+      autoFocus
+      value={aliasValue}
+      onChange={(e) => setAliasValue(e.target.value)}
+
+      onKeyDown={(e) => {
+
+        if (e.key === "Enter") {
+          saveAlias(system)
+        }
+
+      }}
+
+
+    />
+
+  ) : (
+
+    <span
+      onDoubleClick={() => {
+        setEditingAlias(system.sistemas)
+        setAliasValue(system.alias || system.sistemas)
+      }}
+      style={{ cursor: "pointer" }}
+    >
+      {system.alias || system.sistemas}
+    </span>
+
+  )
+)
+
+
+
+
         }
 
       </td>
